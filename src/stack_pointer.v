@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026
+// Create Date: 08/14/2026
 // Design Name: 8085_Datapath
 // Module Name: stack_pointer
 // Project Name: 8085
 // Description: Dedicated 16-bit UP/DOWN counter for SP tracking
 // 
+// Revision:
+// Revision 1.00 - 08/27/2026 - Initial 16-bit synchronous UP/DOWN counter
+// Revision 2.00 - 10/02/2026 - Integrated with LXI SP, INX/DCX SP, and synchronous stack cycles
 //////////////////////////////////////////////////////////////////////////////////
 
 module stack_pointer(

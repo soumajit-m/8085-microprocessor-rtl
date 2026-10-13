@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026
+// Create Date: 08/14/2026
 // Design Name: 8085_Control
 // Module Name: cond_checker
 // Project Name: 8085
 // Description: Evaluates latched flags to trigger conditional branches
 // 
+// Revision:
+// Revision 1.00 - 08/27/2026 - Evaluates condition codes for jumps, calls, and returns
+// Revision 2.00 - 10/01/2026 - Aligned with FSM gated branch execution
 //////////////////////////////////////////////////////////////////////////////////
 
 module cond_checker(

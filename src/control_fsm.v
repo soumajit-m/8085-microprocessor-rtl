@@ -2,11 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026
+// Create Date: 08/13/2026
 // Design Name: 8085_Control
 // Module Name: control_fsm
 // Project Name: 8085
 // Description: Timing and Control FSM with multi-cycle execution routing
+// 
+// Revision:
+// Revision 1.00 - 08/26/2026 - Multi-cycle execution routing and 2-byte I/O fix
+// Revision 2.00 - 10/01/2026 - Added CALL/RET, PUSH/POP sequencing and conditional branch advance
 //////////////////////////////////////////////////////////////////////////////////
 
 module control_fsm(
@@ -24,6 +28,10 @@ module control_fsm(
     input wire cond_check_en,   
     input wire take_branch,     
     input wire halt_req,       
+    input wire is_call,
+    input wire is_ret,
+    input wire is_push,
+    input wire is_pop,
     
     // Interrupt Signals
     input wire intr,           
@@ -43,7 +51,11 @@ module control_fsm(
     output wire w_write_en,
     output wire inc_wz_addr,        // Tells datapath to use WZ + 1
     output wire high_byte_sel,      // Tells datapath to output H instead of L
-    output wire fetch_addr_override // Forces datapath to use PC for address
+    output wire fetch_addr_override,// Forces datapath to use PC for address
+    output wire [1:0] fetch_stage_out,
+    output wire [1:0] exec_stage_out,
+    output wire sp_push_strobe,
+    output wire sp_pop_strobe
 );
 
     localparam M_HALT   = 3'b000; 
@@ -64,6 +76,9 @@ module control_fsm(
     assign s1   = m_cycle[1];
     assign s0   = m_cycle[0];
     
+    assign fetch_stage_out = fetch_stage;
+    assign exec_stage_out  = exec_stage;
+
     // Combinational Datapath Flags
     assign z_write_en = (m_cycle == M_MEM_RD && t_state == T3 && fetch_stage == 1);
     assign w_write_en = (m_cycle == M_MEM_RD && t_state == T3 && fetch_stage == 2);
@@ -71,6 +86,10 @@ module control_fsm(
     assign inc_wz_addr = (exec_stage == 2);
     assign high_byte_sel = (exec_stage == 2);
     assign fetch_addr_override = (m_cycle == M_FETCH) || (m_cycle == M_MEM_RD && fetch_stage != 0);
+
+    // Strobe stack pointer modifications at cycle completion (T3):
+    assign sp_push_strobe = (m_cycle == M_MEM_WR && t_state == T3 && (is_push || is_call));
+    assign sp_pop_strobe  = (m_cycle == M_MEM_RD && t_state == T3 && (is_pop || is_ret));
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin
@@ -94,10 +113,24 @@ module control_fsm(
                             t_state <= T1; 
                             
                             if (cond_check_en && !take_branch) begin
-                                m_cycle <= M_FETCH; 
+                                if (is_ret) begin
+                                    m_cycle <= intr ? M_INTA : M_FETCH;
+                                end else begin
+                                    fetch_stage <= 1;   
+                                    m_cycle <= M_MEM_RD;
+                                end
                             end else if (is_2_byte || is_3_byte) begin
                                 fetch_stage <= 1;   
                                 m_cycle <= M_MEM_RD;
+                            end else if (is_ret) begin
+                                exec_stage <= 1;
+                                m_cycle <= M_MEM_RD;
+                            end else if (is_pop) begin
+                                exec_stage <= 1;
+                                m_cycle <= M_MEM_RD;
+                            end else if (is_push) begin
+                                exec_stage <= 1;
+                                m_cycle <= M_MEM_WR;
                             end else begin
                                 if (intr) m_cycle <= M_INTA;
                                 else if (halt_req) m_cycle <= M_HALT;
@@ -123,7 +156,6 @@ module control_fsm(
                                 m_cycle <= M_MEM_RD; 
                             end else begin
                                 fetch_stage <= 0;
-                                // --- FIX: Route 2-byte I/O instructions to I/O space ---
                                 if (is_io_op && is_mem_read) m_cycle <= M_IO_RD;
                                 else if (is_io_op && is_mem_write) m_cycle <= M_IO_WR;
                                 else m_cycle <= intr ? M_INTA : M_FETCH;
@@ -131,7 +163,10 @@ module control_fsm(
                         end else if (fetch_stage == 2) begin
                             fetch_stage <= 0;
                             // Route to execution phase
-                            if (is_mem_write) begin
+                            if (is_call && take_branch) begin
+                                exec_stage <= 1;
+                                m_cycle <= M_MEM_WR;
+                            end else if (is_mem_write) begin
                                 m_cycle <= M_MEM_WR;
                                 exec_stage <= 1; 
                             end else if (is_mem_read) begin
@@ -140,6 +175,17 @@ module control_fsm(
                             end else begin
                                 m_cycle <= intr ? M_INTA : M_FETCH; 
                             end
+                        end else if (exec_stage == 1) begin
+                            if (is_ret || is_pop || (is_3_byte && is_mem_read)) begin
+                                exec_stage <= 2;
+                                m_cycle <= M_MEM_RD;
+                            end else begin
+                                exec_stage <= 0;
+                                m_cycle <= intr ? M_INTA : M_FETCH;
+                            end
+                        end else if (exec_stage == 2) begin
+                            exec_stage <= 0;
+                            m_cycle <= intr ? M_INTA : M_FETCH;
                         end else begin
                             exec_stage <= 0;
                             m_cycle <= intr ? M_INTA : M_FETCH; 
@@ -153,16 +199,22 @@ module control_fsm(
                     if (t_state == T3) begin
                         t_state <= T1; 
                         
-                        // Chain a second write cycle for 16-bit stores (SHLD)
-                        if (is_3_byte && exec_stage == 1) begin
-                            m_cycle <= M_MEM_WR; 
-                            exec_stage <= 2;
+                        if (exec_stage == 1) begin
+                            if (is_call || is_push || (is_3_byte && is_mem_write)) begin
+                                m_cycle <= M_MEM_WR; 
+                                exec_stage <= 2;
+                            end else begin
+                                exec_stage <= 0;
+                                m_cycle <= intr ? M_INTA : M_FETCH;
+                            end
+                        end else if (exec_stage == 2) begin
+                            exec_stage <= 0;
+                            m_cycle <= intr ? M_INTA : M_FETCH;
                         end else begin
                             exec_stage <= 0;
-                            // --- FIX: Route 2-byte I/O instructions to I/O space ---
-                                if (is_io_op && is_mem_read) m_cycle <= M_IO_RD;
-                                else if (is_io_op && is_mem_write) m_cycle <= M_IO_WR;
-                                else m_cycle <= intr ? M_INTA : M_FETCH; 
+                            if (is_io_op && is_mem_read) m_cycle <= M_IO_RD;
+                            else if (is_io_op && is_mem_write) m_cycle <= M_IO_WR;
+                            else m_cycle <= intr ? M_INTA : M_FETCH; 
                         end
                     end else begin
                         t_state <= t_state + 1;

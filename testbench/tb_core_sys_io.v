@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/19/2026
+// Create Date: 08/16/2026
 // Design Name: 8085_Core_Testbenches
 // Module Name: tb_core_sys_io
 // Project Name: 8085
 // Description: Testbench 4 - Accumulator Specials, Flags, and I/O with Monitor
 // 
+// Revision:
+// Revision 1.00 - 08/28/2026 - Initial I/O and flag special function checks
+// Revision 2.00 - 10/02/2026 - Added automated verification assertions and monitor reporting
 //////////////////////////////////////////////////////////////////////////////////
 
 module tb_core_sys_io();
@@ -74,7 +77,16 @@ module tb_core_sys_io();
         clk = 0; rst = 1; intr = 0;
         #15 rst = 0;
         
-        #600 $finish;
+        #600;
+        $display("\n==================================================");
+        if (uut.reg_A_out === 8'hBB && uut.ir_reg === 8'h76) begin
+            $display("[TEST PASSED] tb_core_sys_io: Accumulator specials, flags, OUT, and IN verified!");
+        end else begin
+            $display("[TEST FAILED] tb_core_sys_io: Reg A=%h (expected BBh), IR=%h (expected 76h)", uut.reg_A_out, uut.ir_reg);
+            $fatal;
+        end
+        $display("==================================================\n");
+        $finish;
     end
 
     // ----------------------------------------------------

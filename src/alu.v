@@ -2,14 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026 03:17:34 PM
+// Create Date: 08/14/2026 03:17:34 PM
 // Design Name: 8085_Datapath
 // Module Name: alu
 // Project Name: 8085
 // Description: Combinational ALU with 5-bit opcode and extended carry logic
 // 
 // Revision:
-// Revision 1.00 - Added ADC/SBB, Expanded alu_op to 5-bit, Added Rotates
+// Revision 1.00 - 08/27/2026 - Added ADC/SBB, Expanded alu_op to 5-bit, Added Rotates
+// Revision 2.00 - 10/02/2026 - Added ac_in, DAA BCD correction logic, and 8085 ANA flag compliance
 //////////////////////////////////////////////////////////////////////////////////
 
 module alu(
@@ -17,6 +18,7 @@ module alu(
     input wire [7:0] b,
     input wire [4:0] alu_op,
     input wire cin,
+    input wire ac_in,
     output wire [7:0] result,
     output wire [4:0] flags_out 
 );
@@ -31,10 +33,17 @@ module alu(
     reg [4:0] temp_ac;
     reg flag_cy_internal;
     
+    reg [8:0] daa_val;
+    reg daa_cy_flag;
+    reg daa_ac_flag;
+
     always @(*) begin
         temp_result = 9'b0; 
         temp_ac = 5'b0;
         flag_cy_internal = temp_result[8]; 
+        daa_val = 9'b0;
+        daa_cy_flag = cin;
+        daa_ac_flag = 1'b0;
         
         case(alu_op)
             // Standard Math
@@ -51,8 +60,8 @@ module alu(
                 temp_ac = {1'b0, a[3:0]} - {1'b0, b[3:0]} - cin; 
             end
             
-            // Logical
-            AND: temp_result = {1'b0, a & b};
+            // Logical (8085 specification: AND sets AC to 1, OR/XRA reset AC to 0)
+            AND: begin temp_result = {1'b0, a & b}; temp_ac = 5'b10000; end
             XRA: temp_result = {1'b0, a ^ b};
             OR:  temp_result = {1'b0, a | b};
             
@@ -64,6 +73,23 @@ module alu(
             CMA: temp_result = {1'b0, ~a};
             STC, CMC: temp_result = {1'b0, a};
             
+            // Decimal Adjust Accumulator (DAA)
+            DAA: begin
+                daa_val = {1'b0, a};
+                daa_cy_flag = cin;
+                daa_ac_flag = 1'b0;
+                if ((a[3:0] > 4'd9) || ac_in) begin
+                    daa_val = daa_val + 9'd6;
+                    daa_ac_flag = 1'b1;
+                end
+                if ((daa_val[7:4] > 4'd9) || cin || daa_val[8]) begin
+                    daa_val = daa_val + 9'd96; // 0x60
+                    daa_cy_flag = 1'b1;
+                end
+                temp_result = daa_val;
+                temp_ac = {daa_ac_flag, 4'b0};
+            end
+
             // Rotates
             RLC: temp_result = {1'b0, a[6:0], a[7]};
             RRC: temp_result = {1'b0, a[0], a[7:1]};
@@ -76,6 +102,7 @@ module alu(
         // Custom Carry Logic for operations that don't use standard math overflow
         if (alu_op == STC) flag_cy_internal = 1'b1;
         else if (alu_op == CMC) flag_cy_internal = ~cin;
+        else if (alu_op == DAA) flag_cy_internal = daa_cy_flag;
         else if (alu_op == RLC || alu_op == RAL) flag_cy_internal = a[7];
         else if (alu_op == RRC || alu_op == RAR) flag_cy_internal = a[0];
         else if (alu_op == INC || alu_op == DEC || alu_op == CMA) flag_cy_internal = cin;

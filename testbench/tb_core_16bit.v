@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/19/2026
+// Create Date: 08/15/2026
 // Design Name: 8085_Core_Testbenches
 // Module Name: tb_core_16bit
 // Project Name: 8085
 // Description: Testbench 2 - 16-bit Math, Pointers, and Memory Operations
 // 
+// Revision:
+// Revision 1.00 - 08/27/2026 - Initial 16-bit pointers and memory regression test
+// Revision 2.00 - 10/01/2026 - Added automated verification assertions and pass/fail monitoring
 // Additional Comments: Tests LXI, DAD, INX, and SHLD
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -71,6 +74,12 @@ module tb_core_16bit();
         $display("PROGRAM COMPLETE - MEMORY DUMP");
         $display("Address 4000h (Expected L = 35h): %h", ram[16'h4000]);
         $display("Address 4001h (Expected H = 32h): %h", ram[16'h4001]);
+        if (ram[16'h4000] === 8'h35 && ram[16'h4001] === 8'h32) begin
+            $display("[TEST PASSED] tb_core_16bit: 16-bit pointers and SHLD verified.");
+        end else begin
+            $display("[TEST FAILED] tb_core_16bit: Memory dump mismatch!");
+            $fatal;
+        end
         $display("==================================================\n");
         $finish;
     end

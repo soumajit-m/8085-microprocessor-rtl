@@ -1,11 +1,27 @@
-# Icarus Verilog & GTKWave Simulation files
+# ==============================================================================
+# Simulation & EDA Artifacts
+# ==============================================================================
+# Icarus Verilog & GTKWave
 *.vcd
 *.vvp
 *.out
 *.lxt
 *.fst
+*.lxt2
 
-# Xilinx Vivado temporary and project files
+# ModelSim / QuestaSim
+work/
+transcript
+*.wlf
+vsim.wlf
+*.vstf
+modelsim.ini
+*.mpf
+*.mti
+
+# ==============================================================================
+# Xilinx Vivado & Vitis
+# ==============================================================================
 *.jou
 *.log
 *.pb
@@ -13,14 +29,54 @@
 *.dir/
 *.str
 .Xil/
+*.dcp
+*.bit
+*.bin
+*.hwdef
+*.sysdef
+*.mcs
+*.prm
+*.ip_user_files/
+*.gen/
+*.runs/
+*.sim/
+*.srcs/
+*.cache/
+*.hw/
+*.ip_cache/
+reports/
+checkpoints/
+webtalk*.log
+webtalk*.jou
+xelab.*
+xsim.*
+xsim.dir/
 
-# Intel Quartus temporary files
+# ==============================================================================
+# Intel Quartus Prime
+# ==============================================================================
+db/
+incremental_db/
+output_files/
 *.qws
 *.rpt
 *.summary
 *.done
 *.smsg
+*.sof
+*.pof
+*.pin
+*.jam
+*.jbc
 
-# OS generated files
+# ==============================================================================
+# OS & Editor Artifacts
+# ==============================================================================
 .DS_Store
 Thumbs.db
+[Dd]esktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

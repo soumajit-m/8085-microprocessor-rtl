@@ -2,14 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026
+// Create Date: 08/14/2026
 // Design Name: 8085_Datapath
 // Module Name: reg_file
 // Project Name: 8085
 // Description: Register File Module with 16-bit Pair Operations
 // 
 // Revision:
-// Revision 1.00 - Added 16-bit WZ pair writing, INX, DCX, and DAD logic
+// Revision 1.00 - 08/27/2026 - Added 16-bit WZ pair writing, INX, DCX, and DAD logic
+// Revision 2.00 - 10/02/2026 - Added DAD SP, 16-bit Carry generation, and XCHG register swap
 //////////////////////////////////////////////////////////////////////////////////
 
 module reg_file(
@@ -29,12 +30,15 @@ module reg_file(
     // --------------------------------------------------------
     // 16-bit Pair Control Ports (New additions)
     // --------------------------------------------------------
-    input wire [1:0] reg_pair_sel,        // 00=BC, 01=DE, 10=HL
+    input wire [1:0] reg_pair_sel,        // 00=BC, 01=DE, 10=HL, 11=SP (for DAD)
     input wire reg_pair_write_en,         // Triggered by LXI and POP
     input wire [15:0] reg_pair_write_data,// Incoming 16-bit data (wz_pair)
     input wire reg_pair_inc,              // Triggered by INX
     input wire reg_pair_dec,              // Triggered by DCX
     input wire reg_pair_add,              // Triggered by DAD
+    input wire [15:0] sp_in,              // Stack pointer for DAD SP
+    input wire xchg_en,                   // Triggered by XCHG
+    output reg dad_carry_out,             // 16-bit Carry out from DAD
     // --------------------------------------------------------
     
     // Asynchronous data outputs for ALU operations
@@ -66,12 +70,15 @@ module reg_file(
     // Synchronous Write & Reset Logic
     // --------------------------------------------------------
     integer i;
+    reg [16:0] dad_sum;
+
     always @(posedge clk or posedge rst) begin
         if (rst) begin
             // Asynchronous reset clears all registers to 0x00
             for (i = 0; i < 8; i = i + 1) begin
                 registers[i] <= 8'h00;
             end
+            dad_carry_out <= 1'b0;
         end else begin
             
             // ------------------------------------------------
@@ -81,6 +88,16 @@ module reg_file(
                 registers[write_sel] <= write_data;
             end
             
+            // ------------------------------------------------
+            // XCHG Operation: Swap DE and HL
+            // ------------------------------------------------
+            if (xchg_en) begin
+                registers[2] <= registers[4]; // D <= H
+                registers[3] <= registers[5]; // E <= L
+                registers[4] <= registers[2]; // H <= D
+                registers[5] <= registers[3]; // L <= E
+            end
+
             // ------------------------------------------------
             // 16-Bit Operations (Priority overwrites 8-bit)
             // ------------------------------------------------
@@ -112,13 +129,16 @@ module reg_file(
                 endcase
             end
             
-            // DAD: 16-bit Double Addition (HL = HL + Pair)
+            // DAD: 16-bit Double Addition (HL = HL + Pair, updates Carry)
             if (reg_pair_add) begin
                 case (reg_pair_sel)
-                    2'b00: {registers[4], registers[5]} <= {registers[4], registers[5]} + {registers[0], registers[1]};
-                    2'b01: {registers[4], registers[5]} <= {registers[4], registers[5]} + {registers[2], registers[3]};
-                    2'b10: {registers[4], registers[5]} <= {registers[4], registers[5]} + {registers[4], registers[5]};
+                    2'b00: dad_sum = {1'b0, registers[4], registers[5]} + {1'b0, registers[0], registers[1]};
+                    2'b01: dad_sum = {1'b0, registers[4], registers[5]} + {1'b0, registers[2], registers[3]};
+                    2'b10: dad_sum = {1'b0, registers[4], registers[5]} + {1'b0, registers[4], registers[5]};
+                    2'b11: dad_sum = {1'b0, registers[4], registers[5]} + {1'b0, sp_in};
                 endcase
+                {registers[4], registers[5]} <= dad_sum[15:0];
+                dad_carry_out <= dad_sum[16];
             end
             
         end

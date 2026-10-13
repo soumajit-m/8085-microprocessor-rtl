@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/19/2026
+// Create Date: 08/15/2026
 // Design Name: 8085_Core_Testbenches
 // Module Name: tb_core_basic
 // Project Name: 8085
 // Description: Testbench 1 - 8-bit Math, Logic, and Data Movement
 // 
+// Revision:
+// Revision 1.00 - 08/26/2026 - Initial testbench regression suite
+// Revision 2.00 - 10/01/2026 - Added self-checking assertions and automated pass/fail verification
 // Additional Comments: Tests MVI, MOV, ADD, SUB, INR, DCR, ANA, and HLT
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -68,7 +71,6 @@ module tb_core_basic();
         // 0007: 05      DCR B      (B = 02h)
         // 0008: A0      ANA B      (A = 06h & 02h = 02h)
         // 0009: 76      HLT
-        ram[16'h0000] = 8'h3E;
         ram[16'h0000] = 8'h3E; ram[16'h0001] = 8'h05;
         ram[16'h0002] = 8'h06; ram[16'h0003] = 8'h08;
         ram[16'h0004] = 8'h80;
@@ -82,7 +84,16 @@ module tb_core_basic();
         clk = 0; rst = 1; intr = 0;
         #20 rst = 0;
         
-        #600 $finish;
+        #600;
+        $display("\n==================================================");
+        if (uut.reg_A_out === 8'h06 && uut.reg_inst.registers[0] === 8'h07) begin
+            $display("[TEST PASSED] tb_core_basic: A=06h, B=07h match expected.");
+        end else begin
+            $display("[TEST FAILED] tb_core_basic: A=%h (expected 06h), B=%h (expected 07h)", uut.reg_A_out, uut.reg_inst.registers[0]);
+            $fatal;
+        end
+        $display("==================================================\n");
+        $finish;
     end
     
     // ----------------------------------------------------

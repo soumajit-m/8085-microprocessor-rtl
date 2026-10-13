@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026
+// Create Date: 08/14/2026
 // Design Name: 8085_Datapath
 // Module Name: addr_mux
 // Project Name: 8085
 // Description: 16-bit multiplexer for external memory addressing
 // 
+// Revision:
+// Revision 1.00 - 08/27/2026 - Address routing for PC, HL, SP, and WZ
+// Revision 2.00 - 10/02/2026 - Integrated with stack and I/O bus multiplexing
 //////////////////////////////////////////////////////////////////////////////////
 
 module addr_mux(

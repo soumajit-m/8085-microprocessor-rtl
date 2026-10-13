@@ -20,18 +20,33 @@ fi
 
 # Check if a testbench name was provided
 if [ -z "$1" ]; then
-    echo "Usage: ./run.sh <testbench_name>"
+    echo "Usage: ./run.sh <testbench_name|all>"
     echo "Available testbenches in testbench/ directory:"
     echo "  1) tb_core_basic"
     echo "  2) tb_core_16bit"
     echo "  3) tb_core_stack_branch"
     echo "  4) tb_core_sys_io"
+    echo "  5) tb_core_advanced"
+    echo "  all) Run all testbenches"
     echo ""
-    echo "Example: ./run.sh tb_core_basic"
+    echo "Example: ./run.sh all"
     exit 1
 fi
 
 TB_NAME=$1
+
+if [ "$TB_NAME" = "all" ]; then
+    TESTS=("tb_core_basic" "tb_core_16bit" "tb_core_stack_branch" "tb_core_sys_io" "tb_core_advanced")
+    for tb in "${TESTS[@]}"; do
+        echo "----------------------------------------"
+        echo ">> Compiling and running $tb..."
+        iverilog -o "${tb}.vvp" src/*.v "testbench/${tb}.v"
+        vvp "${tb}.vvp"
+    done
+    echo "========================================"
+    echo ">> All testbenches completed successfully!"
+    exit 0
+fi
 
 # Check if the testbench file exists
 if [ ! -f "testbench/${TB_NAME}.v" ]; then

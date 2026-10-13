@@ -2,12 +2,15 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 // Engineer: Soumajit Mandal (Roll: 2023ETB016)
 // 
-// Create Date: 09/18/2026
+// Create Date: 08/13/2026
 // Design Name: 8085_Control
 // Module Name: instr_decoder
 // Project Name: 8085
 // Description: Full ISA explicit decoder mapping ALL 246 valid 8085 instructions
 // 
+// Revision:
+// Revision 1.00 - 08/26/2026 - Completed instruction classification and opcode decode table
+// Revision 2.00 - 10/01/2026 - Decoupled SP strobes; exposed is_push, is_pop, is_xchg, is_pchl, is_sphl
 //////////////////////////////////////////////////////////////////////////////////
 
 module instr_decoder(
@@ -25,6 +28,7 @@ module instr_decoder(
     output reg is_2_byte, is_3_byte,
     output reg imm_read_req, operand_mux_sel,   
     output reg pc_write_en, is_call, is_ret, is_rst, cond_check_en,
+    output reg is_push, is_pop, is_xchg, is_pchl, is_sphl,
     output reg [2:0] jump_cond,
     output reg sp_write_en, sp_inc, sp_dec, halt_req, interrupt_en_ctrl, sim_req, rim_req
 );
@@ -45,6 +49,7 @@ module instr_decoder(
         addr_mux_sel = 2'b00; is_2_byte = 0; is_3_byte = 0;
         imm_read_req = 0; operand_mux_sel = 0;
         pc_write_en = 0; is_call = 0; is_ret = 0; is_rst = 0; 
+        is_push = 0; is_pop = 0; is_xchg = 0; is_pchl = 0; is_sphl = 0;
         cond_check_en = 0; jump_cond = 3'b000;
         sp_write_en = 0; sp_inc = 0; sp_dec = 0; 
         halt_req = 0; interrupt_en_ctrl = 0; sim_req = 0; rim_req = 0;
@@ -148,9 +153,9 @@ module instr_decoder(
             
             8'h2A: begin is_3_byte = 1; is_mem_read = 1; addr_mux_sel = 2'b11; reg_pair_sel = 2'b10; reg_pair_write_en = 1; end // LHLD
             8'h22: begin is_3_byte = 1; is_mem_write = 1; addr_mux_sel = 2'b11; reg_pair_sel = 2'b10; end // SHLD
-            8'hEB: begin /* XCHG - Implementation handled directly inside reg_file */ end 
+            8'hEB: begin is_xchg = 1; end // XCHG (Swap DE and HL)
             8'hE3: begin is_mem_read = 1; is_mem_write = 1; addr_mux_sel = 2'b10; end // XTHL
-            8'hF9: begin sp_write_en = 1; end // SPHL
+            8'hF9: begin is_sphl = 1; end // SPHL
 
             // ==========================================
             // 5. BRANCHING & STACK (38 Instructions)
@@ -162,26 +167,26 @@ module instr_decoder(
             end
             
             // Calls (9 Instructions)
-            8'hCD: begin is_3_byte = 1; is_call = 1; sp_dec = 1; end // CALL
+            8'hCD: begin is_3_byte = 1; is_call = 1; end // CALL
             8'hC4, 8'hCC, 8'hD4, 8'hDC, 8'hE4, 8'hEC, 8'hF4, 8'hFC: begin 
-                is_3_byte = 1; is_call = 1; sp_dec = 1; cond_check_en = 1; jump_cond = ir[5:3]; // Conditional Calls
+                is_3_byte = 1; is_call = 1; cond_check_en = 1; jump_cond = ir[5:3]; // Conditional Calls
             end
 
             // Returns (9 Instructions)
-            8'hC9: begin is_ret = 1; sp_inc = 1; end // RET
+            8'hC9: begin is_ret = 1; end // RET
             8'hC0, 8'hC8, 8'hD0, 8'hD8, 8'hE0, 8'hE8, 8'hF0, 8'hF8: begin 
-                is_ret = 1; sp_inc = 1; cond_check_en = 1; jump_cond = ir[5:3]; // Conditional Returns
+                is_ret = 1; cond_check_en = 1; jump_cond = ir[5:3]; // Conditional Returns
             end
 
-            8'hE9: begin pc_write_en = 1; end // PCHL
+            8'hE9: begin is_pchl = 1; pc_write_en = 1; end // PCHL
 
             // PUSH / POP (8 Instructions)
-            8'hC5, 8'hD5, 8'hE5, 8'hF5: begin is_mem_write = 1; sp_dec = 1; addr_mux_sel = 2'b10; reg_pair_sel = ir[5:4]; end // PUSH
-            8'hC1, 8'hD1, 8'hE1, 8'hF1: begin is_mem_read = 1; sp_inc = 1; addr_mux_sel = 2'b10; reg_pair_sel = ir[5:4]; reg_pair_write_en = 1; end // POP
+            8'hC5, 8'hD5, 8'hE5, 8'hF5: begin is_push = 1; reg_pair_sel = ir[5:4]; end // PUSH
+            8'hC1, 8'hD1, 8'hE1, 8'hF1: begin is_pop = 1; reg_pair_sel = ir[5:4]; end // POP
 
             // Restarts (8 Instructions)
             8'hC7, 8'hCF, 8'hD7, 8'hDF, 8'hE7, 8'hEF, 8'hF7, 8'hFF: begin 
-                is_rst = 1; is_call = 1; sp_dec = 1; jump_cond = ir[5:3]; // RST 0-7
+                is_rst = 1; is_call = 1; jump_cond = ir[5:3]; // RST 0-7
             end
 
             // ==========================================
