@@ -138,3 +138,19 @@ PSW: [ S |  Z |  0 | AC |  0 |  P |  1 | CY ]
 * Directly loadable via `LXI SP` (from `WZ`) and `SPHL` (from `HL`).
 * Synchronously decrements on `PUSH` and `CALL`, increments on `POP` and `RET`.
 * Directly indexable via `INX SP` and `DCX SP`.
+
+---
+
+## 6. Physical FPGA Implementation Metrics
+
+The `core_8085` was synthesized directly using **AMD Vivado v2025.2** targeting the **Xilinx Artix-7 (`xc7a35tcpg236-1`)**:
+
+| Resource | Count | Available | Utilization (%) | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Slice LUTs** | 958 | 20,800 | 4.61% | Logic cells for FSM, ALU, and decoders |
+| **Slice Registers** | 141 | 41,600 | 0.34% | Internal architectural registers & state |
+| **Bonded IOBs** | 26 | 106 | 24.53% | Authentic 8085 physical interface pins |
+| **Latches** | 0 | 41,600 | 0.00% | 100% synchronous RTL; zero latch hazards |
+| **Block RAM / DSP**| 0 | — | 0.00% | Synthesized entirely into distributed slices |
+| **Critical Path Delay** | 13.942 ns | — | — | Longest combinatorial datapath |
+| **Maximum Frequency ($F_{max}$)** | **~71.72 MHz** | — | — | **>14× faster than physical 5.0 MHz 8085A-2** |

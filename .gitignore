@@ -28,6 +28,7 @@ modelsim.ini
 *.wdb
 *.dir/
 *.str
+dfx_runtime.txt
 .Xil/
 *.dcp
 *.bit

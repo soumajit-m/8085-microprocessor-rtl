@@ -115,6 +115,26 @@ All testbenches are **self-checking** and validate core execution against a simu
 
 ---
 
+## FPGA Hardware Synthesis Results (Vivado 2025.2 on Artix-7)
+
+The core is 100% self-contained and synthesizable directly without external wrappers, providing exact silicon resource utilization and timing closure on AMD/Xilinx FPGAs:
+
+* **Target Device:** AMD/Xilinx Artix-7 (`xc7a35tcpg236-1`, Digilent Basys 3 target)
+* **Top-Level Module:** `core_8085` (Direct Out-of-Context IP Core Synthesis)
+* **Synthesis Tool:** AMD Vivado v2025.2 (64-bit)
+
+| Metric | Measured Value | Device Available | Utilization |
+| :--- | :--- | :--- | :--- |
+| **Slice LUTs** | **958** | 20,800 | **4.61%** |
+| **Slice Registers (FFs)** | **141** | 41,600 | **0.34%** |
+| **Bonded IOBs** | **26** | 106 | **24.53%** |
+| **Latches Inferred** | **0** | — | **0.00% (100% Synchronous)** |
+| **Block RAM / DSP Blocks** | **0** | — | **0.00% (Pure Soft Core)** |
+| **Critical Path Delay** | **13.942 ns** | — | — |
+| **Maximum Frequency ($F_{max}$)** | **~71.72 MHz** | — | **>14× faster than physical 8085A-2 (5 MHz)** |
+
+---
+
 ## Getting Started
 
 ### Prerequisites

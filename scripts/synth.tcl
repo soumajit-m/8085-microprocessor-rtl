@@ -22,6 +22,9 @@ read_verilog [glob -nocomplain src/*.v]
 # Run Synthesis
 synth_design -top $TOP_MODULE -part $PART_NAME -flatten_hierarchy rebuilt
 
+# Constraint: 100 MHz Clock (10.0 ns period)
+create_clock -period 10.000 -name clk [get_ports clk]
+
 # Generate Reports
 file mkdir reports
 report_utilization -file reports/utilization_synth.rpt
