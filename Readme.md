@@ -71,6 +71,10 @@ graph TD
 ├── docs/
 │   ├── architecture.md          # Complete microarchitecture & timing specification
 │   └── verification.md          # Verification methodology & test suite reference
+├── rpt/
+│   ├── utilization_synth.rpt    # Post-synthesis resource utilization report
+│   ├── timing_summary_synth.rpt # Post-synthesis timing closure & slack report
+│   └── drc_synth.rpt            # Design Rule Check (DRC) report
 ├── scripts/
 │   ├── run.sh                   # Linux/macOS simulation regression runner
 │   ├── run.ps1                  # Windows PowerShell simulation regression runner

@@ -26,10 +26,10 @@ synth_design -top $TOP_MODULE -part $PART_NAME -flatten_hierarchy rebuilt
 create_clock -period 10.000 -name clk [get_ports clk]
 
 # Generate Reports
-file mkdir reports
-report_utilization -file reports/utilization_synth.rpt
-report_timing_summary -file reports/timing_summary_synth.rpt
-report_drc -file reports/drc_synth.rpt
+file mkdir rpt
+report_utilization -file rpt/utilization_synth.rpt
+report_timing_summary -file rpt/timing_summary_synth.rpt
+report_drc -file rpt/drc_synth.rpt
 
 # Export Checkpoint and Netlist
 file mkdir checkpoints
